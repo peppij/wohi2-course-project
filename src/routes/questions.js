@@ -218,6 +218,7 @@ router.post("/:questionId/attempt", async (req, res) => {
         attemptCount,
         createdAt: attempt.createdAt,
     });
+
 });
 
 router.delete("/:questionId/attempt", async (req, res) => {
@@ -251,6 +252,22 @@ router.post("/:questionId/play", async (req, res) => {
 
   const correct =
     answer.trim().toLowerCase() === question.answer.trim().toLowerCase();
+
+  if (correct) {
+  await prisma.attempt.upsert({
+    where: {
+      userId_questionId: {
+        userId: req.user.userId,
+        questionId,
+      },
+    },
+    update: {},
+    create: {
+      userId: req.user.userId,
+      questionId,
+    },
+  });
+}
 
   res.json({
     correct,
