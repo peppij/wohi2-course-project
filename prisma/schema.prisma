@@ -20,7 +20,7 @@ model User {
 model Question {
   id       Int       @id @default(autoincrement())
   question    String    @db.VarChar(255)
-  date     DateTime
+  date DateTime @default(now())
   answer  String    @db.Text
   keywords Keyword[]
   imageUrl String?  @db.VarChar(255)

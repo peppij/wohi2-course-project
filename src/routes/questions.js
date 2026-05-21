@@ -10,10 +10,15 @@ const { z } = require("zod");
 
 const PostInput = z.object({
   question: z.string().min(1),
-  date: z.string().date(),
   answer: z.string().min(1),
   keywords: z.union([z.string(), z.array(z.string())]).optional(),
 });
+
+const fs = require("fs");
+const uploadDir = path.join(__dirname, "..", "..", "public", "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
   destination: path.join(__dirname, "..", "..", "public", "uploads"),
@@ -112,17 +117,22 @@ router.get("/:questionId", async (req, res) => {
 
 //POST
 router.post("/", upload.single("image"), async (req, res) => {
+  console.log("req.body:", req.body);
+  const parsed = PostInput.safeParse(req.body);
+  
+  if (!parsed.success) {
+  console.log(parsed.error.flatten());
+  return res.status(400).json(parsed.error.flatten());
+}
 
-  const { question, date, answer, keywords } = PostInput.parse(req.body);
-
-  console.log("DATE:", date);
+  const { question, answer, keywords } = parsed.data;
 
   const keywordsArray = Array.isArray(keywords) ? keywords : [];
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
   const newQuestion = await prisma.question.create({
     data: {
-      question, date: date? new Date(date): new Date(), answer,
+      question, answer,
       userId: req.user.userId, imageUrl,
       keywords: {
         connectOrCreate: keywordsArray.map((kw) => ({
@@ -154,7 +164,6 @@ router.put("/:questionId", upload.single("image"), isOwner, async (req, res) => 
 
   const data = {
     question,
-    date: date ? new Date(date) : existingQuestion.date,
     answer,
     keywords: {
       set: [],
